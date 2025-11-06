@@ -6,7 +6,7 @@ WORKDIR /app
 # انسخ ملفات Composer
 COPY composer.json composer.lock ./
 
-# تثبيت الحزم بدون تشغيل سكربتات Laravel (منع أخطاء discover)
+# تثبيت الحزم بدون سكربتات Laravel (منع أخطاء discover)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # انسخ باقي المشروع
@@ -21,7 +21,7 @@ RUN docker-php-ext-install pdo pdo_mysql
 # نسخ التطبيق من مرحلة البناء
 COPY --from=build /app /var/www/html
 
-# تعيين الصلاحيات للمجلدات المطلوبة
+# تعيين الصلاحيات
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
@@ -31,12 +31,12 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available
 
 WORKDIR /var/www/html
 
-# إنشاء APP_KEY في حال لم يكن موجودًا
-RUN php artisan key:generate --ansi || true
-
-# 🔹 عند بدء التشغيل، شغّل Apache بعد تنفيذ migrate تلقائيًا
-CMD php artisan migrate --force && apache2-foreground
-
-# Laravel يعمل على المنفذ 8080
+# Laravel سيعمل على المنفذ 8080
 ENV PORT=8080
 EXPOSE 8080
+
+# 🔹 عند بدء التشغيل فقط، وليس أثناء build
+CMD php artisan config:clear && \
+    php artisan route:clear && \
+    php artisan migrate --force || true && \
+    apache2-foreground
