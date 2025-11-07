@@ -5,8 +5,9 @@
 
     RewriteEngine On
 
-    # ✅ استخدم HTTPS دائمًا (Render يعمل عبر HTTPS فقط)
+    # ✅ استخدم HTTPS فقط (تجنب حلقة إعادة التوجيه في Render)
     RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
     # ✅ تمرير Authorization Header (للـ API Tokens)
@@ -17,23 +18,18 @@
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:x-xsrf-token}]
 
-    # ⚠️ ❌ تم تعطيل قاعدة إزالة الشرطة المائلة لتجنب 301 loop
-    # RewriteCond %{REQUEST_FILENAME} !-d
-    # RewriteCond %{REQUEST_URI} (.+)/$
-    # RewriteRule ^ %1 [L,R=301]
-
-    # ✅ توجيه كل الطلبات غير الموجودة إلى index.php
+    # ✅ توجيه كل الطلبات غير الموجودة إلى index.php (Laravel Front Controller)
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# ✅ حماية الملفات الحساسة (لا يمكن الوصول لها عبر المتصفح)
+# ✅ حماية الملفات الحساسة (لا يمكن الوصول إليها عبر المتصفح)
 <FilesMatch "\.(env|json|config|lock|gitignore|gitattributes|md|log|sqlite)$">
     Require all denied
 </FilesMatch>
 
-# ✅ السماح بالوصول فقط إلى مجلدات Laravel العامة
+# ✅ السماح فقط للمجلدات العامة بالوصول
 <IfModule mod_dir.c>
     DirectoryIndex index.php
 </IfModule>
