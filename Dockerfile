@@ -6,7 +6,7 @@ WORKDIR /app
 # انسخ ملفات Composer
 COPY composer.json composer.lock ./
 
-# تثبيت الحزم بدون سكربتات Laravel (منع أخطاء discover)
+# تثبيت الحزم بدون تشغيل سكربتات Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # انسخ باقي المشروع
@@ -18,28 +18,31 @@ FROM php:8.2-apache
 # تثبيت الإضافات المطلوبة لـ Laravel
 RUN docker-php-ext-install pdo pdo_mysql
 
-# نسخ التطبيق من مرحلة البناء
+# انسخ المشروع من مرحلة البناء
 COPY --from=build /app /var/www/html
 
-# تعيين الصلاحيات
+# إنشاء قاعدة البيانات إذا لم تكن موجودة
+RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
+
+# تعيين الصلاحيات الصحيحة
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# تفعيل mod_rewrite للروابط
+# 🔹 إعداد Apache لإعادة التوجيه إلى Laravel
 RUN a2enmod rewrite
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+RUN echo "<Directory /var/www/html/public>\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
-# Laravel سيعمل على المنفذ 8080
-ENV PORT=8080
+# توليد مفتاح التطبيق إن لم يكن موجودًا
+RUN php artisan key:generate --ansi || true
+
+# تنفيذ الترحيلات ثم تشغيل السيرفر
+CMD php artisan migrate --force && apache2-foreground
+
 EXPOSE 8080
-
-# 🔹 عند بدء التشغيل فقط، وليس أثناء build
-CMD php artisan config:clear && \
-    php artisan route:clear && \
-    php artisan migrate --force || true && \
-    apache2-foreground
-
-    # إنشاء قاعدة البيانات إذا لم تكن موجودة
-RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
+ENV PORT=8080
