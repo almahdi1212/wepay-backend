@@ -4,7 +4,7 @@ FROM composer:2.7 AS build
 WORKDIR /app
 COPY composer.json composer.lock ./
 
-# تثبيت الاعتمادات بدون تشغيل سكربتات Laravel (لتفادي أخطاء الاكتشاف أثناء البناء)
+# تثبيت الاعتمادات بدون تشغيل سكربتات Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # نسخ باقي ملفات المشروع
@@ -51,10 +51,10 @@ RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
 
 # ✅ إضافة فحص صحي بسيط للتحقق من التشغيل (للـ /health)
-RUN echo "<?php Route::get('/health', fn()=>response()->json(['status'=>'ok']));" >> routes/web.php
+RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
 
 # ✅ طباعة قائمة المسارات أثناء النشر (لتأكيد التحميل)
-RUN echo '=== ROUTE LIST START ===' && php artisan route:list && echo '=== ROUTE LIST END ==='
+RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
 # تنفيذ migrate عند التشغيل، ثم تشغيل Apache
 CMD php artisan migrate --force && apache2-foreground
