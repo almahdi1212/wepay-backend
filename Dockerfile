@@ -40,3 +40,6 @@ CMD php artisan config:clear && \
     php artisan route:clear && \
     php artisan migrate --force || true && \
     apache2-foreground
+
+    # إنشاء قاعدة البيانات إذا لم تكن موجودة
+RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
