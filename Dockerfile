@@ -4,32 +4,32 @@ FROM composer:2.7 AS build
 WORKDIR /app
 COPY composer.json composer.lock ./
 
-# تثبيت الحزم بدون سكربتات لتجنب أخطاء الاكتشاف
+# تثبيت الاعتمادات بدون تشغيل سكربتات Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
-# نسخ باقي المشروع
+# نسخ باقي ملفات المشروع
 COPY . .
 
 # ---------- Stage 2: PHP + Apache ----------
 FROM php:8.2-apache
 
-# تثبيت الامتدادات المطلوبة
+# تثبيت الامتدادات المطلوبة لـ Laravel
 RUN docker-php-ext-install pdo pdo_mysql
 
 # نسخ التطبيق من مرحلة البناء
 COPY --from=build /app /var/www/html
 
-# إنشاء قاعدة بيانات SQLite إن لم تكن موجودة
+# إنشاء قاعدة البيانات (في حال لم تكن موجودة)
 RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
 
-# صلاحيات المجلدات
+# إعداد الصلاحيات
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# ✅ تفعيل mod_rewrite
+# تفعيل mod_rewrite
 RUN a2enmod rewrite
 
-# ✅ هنا السحر: تكوين VirtualHost يجبر كل الطلبات تمر عبر index.php
+# ✅ إعداد VirtualHost لتمرير كل الطلبات إلى Laravel index.php
 RUN echo '<VirtualHost *:80>\n\
     DocumentRoot /var/www/html/public\n\
     <Directory /var/www/html/public>\n\
@@ -44,14 +44,18 @@ RUN echo '<VirtualHost *:80>\n\
 
 WORKDIR /var/www/html
 
-# تنظيف الكاش وإنشاء مفتاح التطبيق
+# تنظيف الكاش وإنشاء المفتاح
 RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
 
-# تنفيذ migrate عند التشغيل
+# ✅ طباعة قائمة المسارات أثناء النشر (لتتبع نجاح التحميل)
+RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
+
+# تنفيذ migrate عند التشغيل، ثم تشغيل Apache
 CMD php artisan migrate --force && apache2-foreground
 
+# Laravel يعمل على المنفذ 8080
 ENV PORT=8080
 EXPOSE 8080
