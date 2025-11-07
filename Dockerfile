@@ -2,47 +2,44 @@
 FROM composer:2.7 AS build
 
 WORKDIR /app
-
-# انسخ ملفات Composer
 COPY composer.json composer.lock ./
-
-# تثبيت الحزم بدون تشغيل سكربتات Laravel
+# Don't run package scripts during install (prevents package discovery errors at build-time)
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
-
-# انسخ باقي المشروع
 COPY . .
 
-# ---------- Stage 2: إعداد PHP & Apache ----------
+# ---------- Stage 2: PHP + Apache ----------
 FROM php:8.2-apache
 
-# تثبيت الإضافات المطلوبة لـ Laravel
+# PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql
 
-# انسخ المشروع من مرحلة البناء
+# Copy app from build stage
 COPY --from=build /app /var/www/html
 
-# إنشاء قاعدة البيانات إذا لم تكن موجودة
+# Ensure database file exists (for sqlite) — safe if already present
 RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
 
-# تعيين الصلاحيات الصحيحة
+# Permissions for storage & cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 🔹 إعداد Apache لإعادة التوجيه إلى Laravel
+# Enable mod_rewrite and ensure DocumentRoot points to public
 RUN a2enmod rewrite
 RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
-RUN echo "<Directory /var/www/html/public>\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>" >> /etc/apache2/apache2.conf
+
+# Allow .htaccess overrides inside public
+RUN printf "<Directory /var/www/html/public>\n    AllowOverride All\n    Require all granted\n</Directory>\n" >> /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
 
-# توليد مفتاح التطبيق إن لم يكن موجودًا
+# Clear caches (in case) and generate key if missing
+RUN php artisan config:clear || true
+RUN php artisan route:clear || true
+RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
 
-# تنفيذ الترحيلات ثم تشغيل السيرفر
+# Run migrations on startup then start Apache
 CMD php artisan migrate --force && apache2-foreground
 
-EXPOSE 8080
 ENV PORT=8080
+EXPOSE 8080

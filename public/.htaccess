@@ -5,21 +5,30 @@
 
     RewriteEngine On
 
-    # Handle Authorization Header
+    # ✅ ضمان استخدام HTTPS دائمًا (Render يعمل عبر HTTPS فقط)
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # ✅ تمرير Authorization Header (للـ API Tokens)
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Handle X-XSRF-Token Header
+    # ✅ تمرير X-XSRF-Token Header (لـ SPA Frontend)
     RewriteCond %{HTTP:x-xsrf-token} .
-    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:x-xsrf-token}]
 
-    # Redirect Trailing Slashes If Not A Folder...
+    # ✅ إزالة الشرطة المائلة الزائدة (Trailing Slash)
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Send Requests To Front Controller...
+    # ✅ تحويل جميع الطلبات إلى index.php (Laravel Front Controller)
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# ✅ حماية الملفات الحساسة
+<FilesMatch "\.(env|json|config|lock|gitignore|gitattributes|md|log)$">
+    Require all denied
+</FilesMatch>
