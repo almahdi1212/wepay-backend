@@ -10,21 +10,79 @@ use App\Http\Controllers\Api\ExchangeRateController;
 use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\UpdateController;
 use App\Http\Controllers\Api\ShippingRateController;
-use App\Http\Controllers\Api\AuthController; // ✅ فقط هذا الـ use (احذف المكرر)
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes
+| 🔐 تسجيل الدخول والخروج
 |--------------------------------------------------------------------------
-| كل المسارات تبدأ بـ /api
-| مثال: https://wepay-backend-y41w.onrender.com/api/categories
-|
 */
-
-/* 🔐 تسجيل الدخول */
 Route::post('/login', [AuthController::class, 'login']);
 
-/* 🧠 اختبار بسيط للتأكد من الاتصال */
+/*
+|--------------------------------------------------------------------------
+| 🟢 المسارات العامة (لا تتطلب تسجيل الدخول)
+|--------------------------------------------------------------------------
+*/
+
+// 🧩 التصنيفات
+Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{id}', [CategoryController::class, 'show']);
+
+// 💱 أسعار الصرف
+Route::get('/exchange-rate', [ExchangeRateController::class, 'index']);
+
+// 💰 سعر الشحن
+Route::get('/shipping-rate', [ShippingRateController::class, 'index']);
+
+// 📰 آخر التحديثات
+Route::get('/updates', [UpdateController::class, 'index']);
+
+// 🚚 الشحنات (تتبع فقط)
+Route::get('/shipments', [ShipmentController::class, 'index']);
+Route::get('/shipments/{tracking_number}', [ShipmentController::class, 'show']);
+
+/*
+|--------------------------------------------------------------------------
+| 🔒 المسارات المحمية (تحتاج Token)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:sanctum')->group(function () {
+
+    // 🔴 تسجيل الخروج
+    Route::post('/logout', [AuthController::class, 'logout']);
+
+    // 🧩 إدارة التصنيفات
+    Route::post('/categories', [CategoryController::class, 'store']);
+    Route::put('/categories/{id}', [CategoryController::class, 'update']);
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+
+    // 💱 إدارة أسعار الصرف
+    Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
+
+    // 💰 تعديل سعر الشحن
+    Route::post('/shipping-rate', [ShippingRateController::class, 'store']);
+
+    // 📰 إدارة التحديثات
+    Route::post('/updates', [UpdateController::class, 'store']);
+    Route::delete('/updates/{id}', [UpdateController::class, 'destroy']);
+
+    // 🚚 إدارة الشحنات
+    Route::post('/shipments', [ShipmentController::class, 'store']);
+    Route::put('/shipments/{tracking_number}', [ShipmentController::class, 'update']);
+    Route::delete('/shipments/{tracking_number}', [ShipmentController::class, 'destroy']);
+
+    // 🧍 بيانات المستخدم الحالي
+    Route::get('/user', function (\Illuminate\Http\Request $request) {
+        return $request->user();
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| 🧠 اختبار قاعدة البيانات (داخلي فقط)
+|--------------------------------------------------------------------------
+*/
 Route::get('/test-db', function () {
     try {
         if (!Schema::hasTable('categories')) {
@@ -52,53 +110,4 @@ Route::get('/test-db', function () {
             'error' => $e->getMessage(),
         ], 500);
     }
-});
-
-/*
-|--------------------------------------------------------------------------
-| 🟡 المسارات المحمية (تحتاج Token)
-|--------------------------------------------------------------------------
-*/
-Route::middleware('auth:sanctum')->group(function () {
-
-    /* 🔴 تسجيل الخروج */
-    Route::post('/logout', [AuthController::class, 'logout']);
-
-    /* 🧩 قسم التصنيفات (Categories) */
-    Route::prefix('categories')->group(function () {
-        Route::get('/', [CategoryController::class, 'index']);
-        Route::post('/', [CategoryController::class, 'store']);
-        Route::put('/{id}', [CategoryController::class, 'update']);
-        Route::delete('/{id}', [CategoryController::class, 'destroy']);
-        Route::get('/{id}', [CategoryController::class, 'show']);
-    });
-
-    /* 💱 قسم أسعار الصرف (Exchange Rates) */
-    Route::prefix('exchange-rate')->group(function () {
-        Route::get('/', [ExchangeRateController::class, 'index']);
-        Route::post('/', [ExchangeRateController::class, 'update']);
-    });
-
-    /* 🚚 قسم الشحنات (Shipments) */
-    Route::prefix('shipments')->group(function () {
-        Route::get('/', [ShipmentController::class, 'index']);
-        Route::get('/{tracking_number}', [ShipmentController::class, 'show']);
-        Route::post('/', [ShipmentController::class, 'store']);
-        Route::put('/{tracking_number}', [ShipmentController::class, 'update']);
-        Route::delete('/{tracking_number}', [ShipmentController::class, 'destroy']);
-    });
-
-    /* 📰 قسم آخر التحديثات (Updates) */
-    Route::get('/updates', [UpdateController::class, 'index']);
-    Route::post('/updates', [UpdateController::class, 'store']);
-    Route::delete('/updates/{id}', [UpdateController::class, 'destroy']);
-
-    /* 💰 قسم سعر الشحن (Shipping Rate) */
-    Route::get('/shipping-rate', [ShippingRateController::class, 'index']);
-    Route::post('/shipping-rate', [ShippingRateController::class, 'store']);
-
-    /* 🧍 بيانات المستخدم الحالي */
-    Route::get('/user', function (\Illuminate\Http\Request $request) {
-        return $request->user();
-    });
 });
