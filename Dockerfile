@@ -4,7 +4,7 @@ FROM composer:2.7 AS build
 WORKDIR /app
 COPY composer.json composer.lock ./
 
-# تثبيت الاعتمادات بدون تشغيل سكربتات Laravel
+# تثبيت الاعتمادات بدون سكربتات Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
 # نسخ باقي ملفات المشروع
@@ -13,13 +13,14 @@ COPY . .
 # ---------- Stage 2: PHP + Apache ----------
 FROM php:8.2-apache
 
-# تثبيت الامتدادات المطلوبة لـ Laravel
-RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql
+# ✅ تثبيت المكتبات والامتدادات المطلوبة (بما فيها PostgreSQL)
+RUN apt-get update && apt-get install -y libpq-dev \
+    && docker-php-ext-install pdo pdo_mysql pdo_pgsql
 
 # تفعيل mod_rewrite
 RUN a2enmod rewrite
 
-# ✅ إعداد VirtualHost + تفعيل AllowOverride وRewrite الصحيح
+# ✅ إعداد VirtualHost الصحيح
 RUN echo '<VirtualHost *:80>\n\
     DocumentRoot /var/www/html/public\n\
     <Directory /var/www/html/public>\n\
@@ -35,9 +36,6 @@ RUN echo '<VirtualHost *:80>\n\
 # نسخ التطبيق من مرحلة البناء
 COPY --from=build /app /var/www/html
 
-# إنشاء قاعدة البيانات (في حال لم تكن موجودة)
-RUN mkdir -p /var/www/html/database && touch /var/www/html/database/database.sqlite
-
 # إعداد الصلاحيات
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
@@ -50,15 +48,14 @@ RUN php artisan route:clear || true
 RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
 
-# ✅ إضافة فحص صحي بسيط للتحقق من التشغيل (للـ /health)
+# ✅ نقطة فحص التشغيل
 RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
 
-# ✅ طباعة قائمة المسارات أثناء النشر (لتأكيد التحميل)
+# ✅ عرض المسارات أثناء النشر
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
 # تنفيذ migrate عند التشغيل، ثم تشغيل Apache
 CMD php artisan migrate --force && apache2-foreground
 
-# Laravel يعمل على المنفذ 8080
 ENV PORT=8080
 EXPOSE 8080
