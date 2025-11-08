@@ -111,3 +111,17 @@ Route::get('/test-db', function () {
         ], 500);
     }
 });
+// 🧩 إنشاء مستخدم admin مؤقتًا
+Route::get('/create-admin', function () {
+    try {
+        \App\Models\User::create([
+            'username' => 'admin',
+            'password' => \Illuminate\Support\Facades\Hash::make('123456'),
+        ]);
+
+        return response()->json(['message' => '✅ تم إنشاء المستخدم admin بنجاح']);
+    } catch (\Throwable $e) {
+        return response()->json(['error' => $e->getMessage()]);
+    }
+});
+
