@@ -14,7 +14,7 @@ COPY . .
 FROM php:8.2-apache
 
 # تثبيت الامتدادات المطلوبة لـ Laravel
-RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-install pdo pdo_mysql pdo_pgsql
 
 # تفعيل mod_rewrite
 RUN a2enmod rewrite
