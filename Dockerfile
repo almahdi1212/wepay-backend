@@ -57,8 +57,8 @@ RUN printf "\nRoute::get('/health', function () { return response()->json(['stat
 # ✅ عرض المسارات أثناء النشر
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
-# إعادة إنشاء قاعدة البيانات بالكامل قبل تشغيل السيرفر
-CMD php artisan migrate:fresh --force && php artisan db:seed --force && apache2-foreground
+# ✅ تأكد من إعداد قاعدة البيانات قبل التشغيل
+CMD php artisan config:clear && php artisan migrate --force && apache2-foreground
 
 
 ENV PORT=8080
