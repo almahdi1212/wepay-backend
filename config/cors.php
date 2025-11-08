@@ -23,6 +23,8 @@ return [
         'http://127.0.0.1:5173',
         'https://wepay-frontend.vercel.app',
         'https://wepay-backend-y41w.onrender.com',
+        '*', // احتياطي
+
     ],
 
     // 🟠 لا حاجة لتفعيل الأنماط

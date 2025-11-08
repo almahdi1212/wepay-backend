@@ -47,6 +47,9 @@ RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
+# ✅ تأكيد تحميل إعدادات CORS
+RUN php artisan config:cache
+
 
 # ✅ نقطة فحص التشغيل
 RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
