@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Database\QueryException;
 use App\Models\User;
 
 class UserController extends Controller
@@ -15,7 +14,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::select('id', 'username', 'created_at')
+        $users = User::select('id', 'name', 'username', 'created_at')
             ->orderBy('id', 'desc')
             ->get();
 
@@ -28,33 +27,21 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'name' => 'required|string|max:100',
             'username' => 'required|string|unique:users',
             'password' => 'required|string|min:6',
         ]);
 
-        try {
-            $user = User::create([
-                'username' => $request->username,
-                'password' => Hash::make($request->password),
-            ]);
+        $user = User::create([
+            'name' => $request->name,
+            'username' => $request->username,
+            'password' => Hash::make($request->password),
+        ]);
 
-            return response()->json([
-                'message' => '✅ تم إنشاء المستخدم بنجاح',
-                'user' => $user,
-            ], 201);
-        } catch (QueryException $e) {
-            // 🟡 معالجة حالة تكرار اسم المستخدم
-            if ($e->getCode() == 23000) {
-                return response()->json([
-                    'message' => '⚠️ اسم المستخدم مستخدم بالفعل، يرجى اختيار اسم آخر',
-                ], 409);
-            }
-
-            return response()->json([
-                'message' => '❌ حدث خطأ أثناء إنشاء المستخدم',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'message' => '✅ تم إنشاء المستخدم بنجاح',
+            'user' => $user
+        ], 201);
     }
 
     /**
@@ -64,35 +51,32 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
+        // ✅ لا يمكن تعديل اسم المستخدم للمسؤول الأساسي (admin)
+        if ($user->username === 'admin' && $request->username !== 'admin') {
+            return response()->json([
+                'message' => '⚠️ لا يمكن تعديل اسم المستخدم الخاص بالمشرف الأساسي'
+            ], 403);
+        }
+
         $request->validate([
+            'name' => 'required|string|max:100',
             'username' => 'required|string|unique:users,username,' . $user->id,
             'password' => 'nullable|string|min:6',
         ]);
 
         $updateData = [
+            'name' => $request->name,
             'username' => $request->username,
         ];
 
+        // ✅ تحديث كلمة المرور فقط إذا تم إدخالها
         if (!empty($request->password)) {
             $updateData['password'] = Hash::make($request->password);
         }
 
-        try {
-            $user->update($updateData);
+        $user->update($updateData);
 
-            return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
-        } catch (QueryException $e) {
-            if ($e->getCode() == 23000) {
-                return response()->json([
-                    'message' => '⚠️ اسم المستخدم مستخدم بالفعل، يرجى اختيار اسم آخر',
-                ], 409);
-            }
-
-            return response()->json([
-                'message' => '❌ حدث خطأ أثناء تحديث المستخدم',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+        return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
     }
 
     /**
@@ -101,13 +85,20 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+
+        if ($user->username === 'admin') {
+            return response()->json([
+                'message' => '❌ لا يمكن حذف المستخدم الإداري الرئيسي'
+            ], 403);
+        }
+
         $user->delete();
 
         return response()->json(['message' => '🗑️ تم حذف المستخدم بنجاح']);
     }
 
     /**
-     * 🔑 تغيير كلمة المرور
+     * 🔑 تغيير كلمة المرور (اختياري)
      */
     public function changePassword(Request $request, $id)
     {

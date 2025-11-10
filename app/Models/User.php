@@ -15,9 +15,9 @@ class User extends Authenticatable
      * الأعمدة التي يمكن إدخالها بشكل مباشر (Mass Assignment)
      */
     protected $fillable = [
-        'username',
-        'email',
-        'password',
+        'name',        // ✅ الاسم الكامل
+        'username',    // ✅ اسم المستخدم (لتسجيل الدخول)
+        'password',    // ✅ كلمة المرور
     ];
 
     /**
@@ -26,12 +26,5 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-    ];
-
-    /**
-     * أنواع التحويل (Casting)
-     */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
     ];
 }
