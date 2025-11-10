@@ -51,32 +51,46 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // ✅ لا يمكن تعديل اسم المستخدم للمسؤول الأساسي (admin)
-        if ($user->username === 'admin' && $request->username !== 'admin') {
-            return response()->json([
-                'message' => '⚠️ لا يمكن تعديل اسم المستخدم الخاص بالمشرف الأساسي'
-            ], 403);
+        // ✅ التحقق من نوع المستخدم (admin أو عادي)
+        if ($user->username === 'admin') {
+            // للمشرف الأساسي فقط: يمكن تعديل الاسم وكلمة المرور فقط
+            $request->validate([
+                'name' => 'required|string|max:100',
+                'password' => 'nullable|string|min:6',
+            ]);
+
+            $updateData = [
+                'name' => $request->name,
+            ];
+
+            if (!empty($request->password)) {
+                $updateData['password'] = Hash::make($request->password);
+            }
+
+            $user->update($updateData);
+
+            return response()->json(['message' => '✅ تم تحديث بيانات المشرف بنجاح']);
+        } else {
+            // لباقي المستخدمين
+            $request->validate([
+                'name' => 'required|string|max:100',
+                'username' => 'required|string|unique:users,username,' . $user->id,
+                'password' => 'nullable|string|min:6',
+            ]);
+
+            $updateData = [
+                'name' => $request->name,
+                'username' => $request->username,
+            ];
+
+            if (!empty($request->password)) {
+                $updateData['password'] = Hash::make($request->password);
+            }
+
+            $user->update($updateData);
+
+            return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
         }
-
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'username' => 'required|string|unique:users,username,' . $user->id,
-            'password' => 'nullable|string|min:6',
-        ]);
-
-        $updateData = [
-            'name' => $request->name,
-            'username' => $request->username,
-        ];
-
-        // ✅ تحديث كلمة المرور فقط إذا تم إدخالها
-        if (!empty($request->password)) {
-            $updateData['password'] = Hash::make($request->password);
-        }
-
-        $user->update($updateData);
-
-        return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
     }
 
     /**
