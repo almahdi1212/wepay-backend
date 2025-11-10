@@ -58,7 +58,10 @@ RUN printf "\nRoute::get('/health', function () { return response()->json(['stat
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
 # ✅ تأكد من إعداد قاعدة البيانات قبل التشغيل
-CMD php artisan config:clear && php artisan migrate --force && apache2-foreground
+# ✅ أمر التشغيل النهائي
+CMD php artisan config:clear \
+    && php artisan migrate:fresh --seed --force \
+    && apache2-foreground
 
 
 ENV PORT=8080
