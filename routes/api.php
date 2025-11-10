@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ShipmentController;
 use App\Http\Controllers\Api\UpdateController;
 use App\Http\Controllers\Api\ShippingRateController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +45,7 @@ Route::get('/shipments/{tracking_number}', [ShipmentController::class, 'show']);
 
 /*
 |--------------------------------------------------------------------------
-| 🔒 المسارات المحمية (تحتاج Token)
+| 🔒 المسارات المحمية (تحتاج Token - auth:sanctum)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
@@ -76,6 +77,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (\Illuminate\Http\Request $request) {
         return $request->user();
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | 👥 إدارة المستخدمين (محمي)
+    |--------------------------------------------------------------------------
+    | GET /users               -> يعرض قائمة المستخدمين
+    | POST /users              -> يضيف مستخدم جديد
+    | PUT /users/{id}          -> يحدّث بيانات مستخدم
+    | DELETE /users/{id}       -> يحذف مستخدم
+    | POST /users/{id}/change-password -> يغيّر كلمة مرور مستخدم (يتحقق من current_password)
+    */
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // تغيير كلمة المرور لنفس المستخدم (يتطلب body: current_password, new_password)
+    Route::post('/users/{id}/change-password', [UserController::class, 'changePassword']);
 });
 
 /*
@@ -111,17 +130,3 @@ Route::get('/test-db', function () {
         ], 500);
     }
 });
-// 🧩 إنشاء مستخدم admin مؤقتًا
-Route::get('/create-admin', function () {
-    try {
-        \App\Models\User::create([
-            'username' => 'admin',
-            'password' => \Illuminate\Support\Facades\Hash::make('123456'),
-        ]);
-
-        return response()->json(['message' => '✅ تم إنشاء المستخدم admin بنجاح']);
-    } catch (\Throwable $e) {
-        return response()->json(['error' => $e->getMessage()]);
-    }
-});
-
