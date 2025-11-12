@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 
 class UserController extends Controller
@@ -12,20 +13,35 @@ class UserController extends Controller
     /**
      * 📋 عرض جميع المستخدمين
      */
-    public function index()
-    {
-        $users = User::select('id', 'name', 'username', 'created_at')
-            ->orderBy('id', 'desc')
-            ->get();
+/**
+ * 📋 عرض جميع المستخدمين (مسموح للجميع)
+ */
+public function index()
+{
+    // ✅ تم إزالة شرط isAdmin()
+    $users = User::select('id', 'name', 'username', 'created_at')
+        ->orderBy('id', 'desc')
+        ->get();
 
-        return response()->json(['data' => $users]);
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $users,
+    ]);
+}
+
 
     /**
      * ➕ إضافة مستخدم جديد
      */
     public function store(Request $request)
     {
+        if (!$this->isAdmin()) {
+            return response()->json([
+                'error_code' => 'FORBIDDEN',
+                'message' => '🚫 غير مصرح لك بإضافة مستخدمين',
+            ], 403);
+        }
+
         $request->validate([
             'name' => 'required|string|max:100',
             'username' => 'required|string|unique:users',
@@ -49,19 +65,23 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
+        if (!$this->isAdmin()) {
+            return response()->json([
+                'error_code' => 'FORBIDDEN',
+                'message' => '🚫 غير مصرح لك بتعديل المستخدمين',
+            ], 403);
+        }
+
         $user = User::findOrFail($id);
 
-        // ✅ التحقق من نوع المستخدم (admin أو عادي)
+        // ✅ لو المستخدم هو admin، يمكن تعديل الاسم وكلمة المرور فقط
         if ($user->username === 'admin') {
-            // للمشرف الأساسي فقط: يمكن تعديل الاسم وكلمة المرور فقط
             $request->validate([
                 'name' => 'required|string|max:100',
                 'password' => 'nullable|string|min:6',
             ]);
 
-            $updateData = [
-                'name' => $request->name,
-            ];
+            $updateData = ['name' => $request->name];
 
             if (!empty($request->password)) {
                 $updateData['password'] = Hash::make($request->password);
@@ -70,27 +90,27 @@ class UserController extends Controller
             $user->update($updateData);
 
             return response()->json(['message' => '✅ تم تحديث بيانات المشرف بنجاح']);
-        } else {
-            // لباقي المستخدمين
-            $request->validate([
-                'name' => 'required|string|max:100',
-                'username' => 'required|string|unique:users,username,' . $user->id,
-                'password' => 'nullable|string|min:6',
-            ]);
-
-            $updateData = [
-                'name' => $request->name,
-                'username' => $request->username,
-            ];
-
-            if (!empty($request->password)) {
-                $updateData['password'] = Hash::make($request->password);
-            }
-
-            $user->update($updateData);
-
-            return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
         }
+
+        // ✅ لباقي المستخدمين
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'username' => 'required|string|unique:users,username,' . $user->id,
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $updateData = [
+            'name' => $request->name,
+            'username' => $request->username,
+        ];
+
+        if (!empty($request->password)) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        $user->update($updateData);
+
+        return response()->json(['message' => '✅ تم تحديث المستخدم بنجاح']);
     }
 
     /**
@@ -98,11 +118,19 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
+        if (!$this->isAdmin()) {
+            return response()->json([
+                'error_code' => 'FORBIDDEN',
+                'message' => '🚫 غير مصرح لك بحذف المستخدمين',
+            ], 403);
+        }
+
         $user = User::findOrFail($id);
 
         if ($user->username === 'admin') {
             return response()->json([
-                'message' => '❌ لا يمكن حذف المستخدم الإداري الرئيسي'
+                'error_code' => 'PROTECTED_ACCOUNT',
+                'message' => '❌ لا يمكن حذف المستخدم الإداري الرئيسي',
             ], 403);
         }
 
@@ -118,6 +146,14 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
+        // ✅ السماح للمستخدم نفسه أو للمشرف admin فقط
+        if (!$this->isAdmin() && Auth::id() != $user->id) {
+            return response()->json([
+                'error_code' => 'FORBIDDEN',
+                'message' => '🚫 غير مصرح لك بتغيير كلمة المرور لهذا المستخدم',
+            ], 403);
+        }
+
         $request->validate([
             'current_password' => 'required|string',
             'new_password' => 'required|string|min:6|different:current_password',
@@ -132,5 +168,14 @@ class UserController extends Controller
         ]);
 
         return response()->json(['message' => '✅ تم تغيير كلمة المرور بنجاح']);
+    }
+
+    /**
+     * 🧠 دالة مساعدة للتحقق من أن المستخدم الحالي هو admin
+     */
+    private function isAdmin()
+    {
+        $user = Auth::user();
+        return $user && $user->username === 'admin';
     }
 }

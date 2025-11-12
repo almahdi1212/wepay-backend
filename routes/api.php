@@ -42,6 +42,8 @@ Route::get('/updates', [UpdateController::class, 'index']);
 // 🚚 الشحنات (تتبع فقط)
 Route::get('/shipments', [ShipmentController::class, 'index']);
 Route::get('/shipments/{tracking_number}', [ShipmentController::class, 'show']);
+    // ✅ جديد: تحديث الحالة لعدة شحنات دفعة واحدة
+    Route::put('/shipments/bulk-update', [ShipmentController::class, 'bulkUpdate']);
 
 /*
 |--------------------------------------------------------------------------
@@ -53,27 +55,53 @@ Route::middleware('auth:sanctum')->group(function () {
     // 🔴 تسجيل الخروج
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // 🧩 إدارة التصنيفات
+    /*
+    |--------------------------------------------------------------------------
+    | 🧩 إدارة التصنيفات
+    |--------------------------------------------------------------------------
+    */
     Route::post('/categories', [CategoryController::class, 'store']);
     Route::put('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 
-    // 💱 إدارة أسعار الصرف
+    /*
+    |--------------------------------------------------------------------------
+    | 💱 إدارة أسعار الصرف
+    |--------------------------------------------------------------------------
+    */
     Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
 
-    // 💰 تعديل سعر الشحن
+    /*
+    |--------------------------------------------------------------------------
+    | 💰 تعديل سعر الشحن
+    |--------------------------------------------------------------------------
+    */
     Route::post('/shipping-rate', [ShippingRateController::class, 'store']);
 
-    // 📰 إدارة التحديثات
+    /*
+    |--------------------------------------------------------------------------
+    | 📰 إدارة التحديثات
+    |--------------------------------------------------------------------------
+    */
     Route::post('/updates', [UpdateController::class, 'store']);
     Route::delete('/updates/{id}', [UpdateController::class, 'destroy']);
 
-    // 🚚 إدارة الشحنات
+    /*
+    |--------------------------------------------------------------------------
+    | 🚚 إدارة الشحنات
+    |--------------------------------------------------------------------------
+    */
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::put('/shipments/{tracking_number}', [ShipmentController::class, 'update']);
     Route::delete('/shipments/{tracking_number}', [ShipmentController::class, 'destroy']);
 
-    // 🧍 بيانات المستخدم الحالي
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 👤 المستخدم الحالي
+    |--------------------------------------------------------------------------
+    */
     Route::get('/user', function (\Illuminate\Http\Request $request) {
         return $request->user();
     });
@@ -86,14 +114,14 @@ Route::middleware('auth:sanctum')->group(function () {
     | POST /users              -> يضيف مستخدم جديد
     | PUT /users/{id}          -> يحدّث بيانات مستخدم
     | DELETE /users/{id}       -> يحذف مستخدم
-    | POST /users/{id}/change-password -> يغيّر كلمة مرور مستخدم (يتحقق من current_password)
+    | POST /users/{id}/change-password -> يغيّر كلمة مرور مستخدم
     */
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-    // تغيير كلمة المرور لنفس المستخدم (يتطلب body: current_password, new_password)
+    // تغيير كلمة المرور لنفس المستخدم (body: current_password, new_password)
     Route::post('/users/{id}/change-password', [UserController::class, 'changePassword']);
 });
 
