@@ -18,13 +18,10 @@ return [
     'allowed_methods' => ['*'],
 
     // 🟢 السماح فقط بالنطاقات التالية
-    'allowed_origins' => [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-        'https://wepay-frontend.vercel.app',
-        'https://wepay-backend-y41w.onrender.com',
-        'https://www.sheinlibya.com'
-    ],
+  'allowed_origins' => [
+    'https://sheinlibya.com',
+    'https://www.sheinlibya.com',
+],
 
     // 🟠 لا حاجة لأنماط regex هنا
     'allowed_origins_patterns' => [],
