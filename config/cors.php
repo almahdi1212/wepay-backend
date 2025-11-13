@@ -20,6 +20,7 @@ return [
     // 🟢 السماح فقط بالنطاقات التالية
   'allowed_origins' => [
     'https://sheinlibya.com',
+    'http://localhost:5173/',
     'https://www.sheinlibya.com',
 ],
 
