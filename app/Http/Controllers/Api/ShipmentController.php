@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Shipment;
-use App\Models\ShipmentStatusHistory; // <<-- استيراد الموديل المسؤول عن السجل
+use App\Models\ShipmentStatusHistory;
 use Illuminate\Support\Str;
 
 class ShipmentController extends Controller
@@ -24,7 +24,7 @@ class ShipmentController extends Controller
     }
 
     /**
-     * 🔍 عرض تفاصيل شحنة واحدة برقم التتبع مع سجل الحالات (مرتَّبًا زمنياً)
+     * 🔍 عرض تفاصيل شحنة واحدة
      */
     public function show($tracking_number)
     {
@@ -34,8 +34,8 @@ class ShipmentController extends Controller
                 $q->with('user:id,username,name')->orderBy('created_at', 'asc');
             },
         ])
-            ->where('tracking_number', $tracking_number)
-            ->first();
+        ->where('tracking_number', $tracking_number)
+        ->first();
 
         if (!$shipment) {
             return response()->json([
@@ -51,7 +51,7 @@ class ShipmentController extends Controller
     }
 
     /**
-     * ➕ إضافة شحنة جديدة + تسجيل أول حالة (التاريخ يُخزّن تلقائياً باستخدام timestamps)
+     * ➕ إضافة شحنة جديدة
      */
     public function store(Request $request)
     {
@@ -63,20 +63,24 @@ class ShipmentController extends Controller
             'price_lyd' => 'nullable|numeric',
             'quantity' => 'nullable|integer|min:1',
             'description' => 'nullable|string',
-            'user_id' => 'nullable|integer|exists:users,id',
             'status_code' => 'required|integer|min:1|max:4',
         ]);
 
+        // 🎯 إجبار النظام على استخدام user_id للمستخدم الحالي
+        $validated['user_id'] = auth()->id();
+
+        // رقم تتبع عشوائي
         $validated['tracking_number'] = strtoupper(Str::random(8));
 
+        // إنشاء الشحنة
         $shipment = Shipment::create($validated);
 
-        // تسجيل أول حالة (created_at سيحمل توقيت الإنشاء)
+        // إنشاء أول سجل حالة
         ShipmentStatusHistory::create([
             'shipment_id' => $shipment->id,
             'status_code' => $validated['status_code'],
             'note' => null,
-            'user_id' => auth()->id() ?? $validated['user_id'] ?? null,
+            'user_id' => auth()->id(),
         ]);
 
         return response()->json([
@@ -87,7 +91,7 @@ class ShipmentController extends Controller
     }
 
     /**
-     * ✏️ تعديل شحنة موجودة — وفي حال تغيّر الكود الخاص بالحالة، نسجل السجل مع التاريخ
+     * ✏️ تعديل شحنة
      */
     public function update(Request $request, $tracking_number)
     {
@@ -101,20 +105,23 @@ class ShipmentController extends Controller
             'price_lyd' => 'nullable|numeric',
             'quantity' => 'nullable|integer|min:1',
             'description' => 'nullable|string',
-            'user_id' => 'nullable|integer|exists:users,id',
             'status_code' => 'required|integer|min:1|max:4',
         ]);
 
+        // ❌ منع تغيير المستخدم المسؤول
+        $validated['user_id'] = $shipment->user_id;
+
         $oldStatus = $shipment->status_code;
+
         $shipment->update($validated);
 
-        // إذا تغيّرت الحالة، نسجّل السجل (created_at تلقائياً هو تاريخ التحديث)
+        // إذا تغيرت الحالة → سجل جديد
         if ($oldStatus != $validated['status_code']) {
             ShipmentStatusHistory::create([
                 'shipment_id' => $shipment->id,
                 'status_code' => $validated['status_code'],
                 'note' => null,
-                'user_id' => auth()->id() ?? $validated['user_id'] ?? null,
+                'user_id' => auth()->id(),
             ]);
         }
 
@@ -140,7 +147,7 @@ class ShipmentController extends Controller
     }
 
     /**
-     * 🔁 تحديث حالة عدة شحنات دفعة واحدة + تسجيل السجلات (timestamps محفوظة تلقائياً)
+     * 🔁 تحديث عدة شحنات دفعة واحدة
      */
     public function bulkUpdate(Request $request)
     {
