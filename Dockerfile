@@ -4,23 +4,18 @@ FROM composer:2.7 AS build
 WORKDIR /app
 COPY composer.json composer.lock ./
 
-# تثبيت الاعتمادات بدون سكربتات Laravel
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts
 
-# نسخ باقي ملفات المشروع
 COPY . .
 
 # ---------- Stage 2: PHP + Apache ----------
 FROM php:8.2-apache
 
-# ✅ تثبيت المكتبات والامتدادات المطلوبة (بما فيها PostgreSQL)
 RUN apt-get update && apt-get install -y libpq-dev \
     && docker-php-ext-install pdo pdo_mysql pdo_pgsql
 
-# تفعيل mod_rewrite
 RUN a2enmod rewrite
 
-# ✅ إعداد VirtualHost الصحيح
 RUN echo '<VirtualHost *:80>\n\
     DocumentRoot /var/www/html/public\n\
     <Directory /var/www/html/public>\n\
@@ -30,39 +25,30 @@ RUN echo '<VirtualHost *:80>\n\
     </Directory>\n\
     ErrorLog /var/log/apache2/error.log\n\
     CustomLog /var/log/apache2/access.log combined\n\
-</VirtualHost>' > /etc/apache2/sites-available/000-default.conf && \
-    echo "<Directory /var/www/html/public>\nAllowOverride All\nRequire all granted\n</Directory>" >> /etc/apache2/apache2.conf
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf \
+    && echo "<Directory /var/www/html/public>\nAllowOverride All\nRequire all granted\n</Directory>" >> /etc/apache2/apache2.conf
 
-# نسخ التطبيق من مرحلة البناء
 COPY --from=build /app /var/www/html
 
-# إعداد الصلاحيات
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 WORKDIR /var/www/html
 
-# تنظيف الكاش وإنشاء المفتاح
 RUN php artisan config:clear || true
 RUN php artisan route:clear || true
 RUN php artisan cache:clear || true
 RUN php artisan key:generate --ansi || true
-# ✅ تأكيد تحميل إعدادات CORS
 RUN php artisan config:cache
 
-
-# ✅ نقطة فحص التشغيل
+# Health Route
 RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
 
-# ✅ عرض المسارات أثناء النشر
+# Show Routes (اختياري)
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
-# ✅ تأكد من إعداد قاعدة البيانات قبل التشغيل
-# ✅ أمر التشغيل النهائي
-CMD php artisan config:clear \
-    && php artisan migrate:fresh --seed --force \
-    && apache2-foreground
-
+# ---------- ⛔️ لا يوجد أي Migrate أو Fresh أو Seed ----------
+CMD apache2-foreground
 
 ENV PORT=8080
 EXPOSE 8080
