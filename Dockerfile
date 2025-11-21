@@ -41,9 +41,7 @@ RUN printf "\nRoute::get('/health', function () { return response()->json(['stat
 # اظهار المسارات (اختياري)
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
-RUN php artisan config:clear
-RUN php artisan cache:clear
-RUN php artisan route:clear
+
 # ---------- ⭐️ تشغيل Seeder فقط دون حذف بيانات ----------
 CMD php artisan db:seed --force && apache2-foreground
 
