@@ -38,11 +38,11 @@ WORKDIR /var/www/html
 # Health Route
 RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
 
-# Show Routes (اختياري)
+# اظهار المسارات (اختياري)
 RUN echo "=== ROUTE LIST START ===" && php artisan route:list && echo "=== ROUTE LIST END ==="
 
-# ---------- ⛔️ لا يوجد أي Migrate أو Fresh أو Seed ----------
-CMD apache2-foreground
+# ---------- ⭐️ تشغيل Seeder فقط دون حذف بيانات ----------
+CMD php artisan db:seed --force && apache2-foreground
 
 ENV PORT=8080
 EXPOSE 8080
