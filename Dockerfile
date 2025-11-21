@@ -35,12 +35,6 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 WORKDIR /var/www/html
 
-RUN php artisan config:clear || true
-RUN php artisan route:clear || true
-RUN php artisan cache:clear || true
-RUN php artisan key:generate --ansi || true
-RUN php artisan config:cache
-
 # Health Route
 RUN printf "\nRoute::get('/health', function () { return response()->json(['status' => 'ok']); });\n" >> routes/web.php
 

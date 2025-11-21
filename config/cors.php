@@ -18,11 +18,8 @@ return [
     'allowed_methods' => ['*'],
 
     // 🟢 السماح فقط بالنطاقات التالية
-  'allowed_origins' => [
-    'https://sheinlibya.com',
-    'http://localhost:5173',
-    'https://www.sheinlibya.com',
-],
+    'allowed_origins' => ['*'],
+
 
     // 🟠 لا حاجة لأنماط regex هنا
     'allowed_origins_patterns' => [],
