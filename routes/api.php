@@ -42,6 +42,7 @@ Route::get('/updates', [UpdateController::class, 'index']);
 // 🚚 الشحنات (تتبع فقط)
 Route::get('/shipments', [ShipmentController::class, 'index']);
 Route::get('/shipments/{tracking_number}', [ShipmentController::class, 'show']);
+Route::delete('/shipments', [ShipmentController::class, 'destroyAll']);
     // ✅ جديد: تحديث الحالة لعدة شحنات دفعة واحدة
     Route::put('/shipments/bulk-update', [ShipmentController::class, 'bulkUpdate']);
 
@@ -94,7 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::put('/shipments/{tracking_number}', [ShipmentController::class, 'update']);
     Route::delete('/shipments/{tracking_number}', [ShipmentController::class, 'destroy']);
-    Route::delete('/shipments', [ShipmentController::class, 'destroyAll']);
+    
 
 
 

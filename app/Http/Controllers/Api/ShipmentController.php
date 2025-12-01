@@ -146,7 +146,7 @@ class ShipmentController extends Controller
         ]);
     }
 
-        public function destroyAll()
+    public function destroyAll()
 {
     ShipmentStatusHistory::truncate();
     Shipment::truncate();
