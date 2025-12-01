@@ -146,6 +146,18 @@ class ShipmentController extends Controller
         ]);
     }
 
+        public function destroyAll()
+{
+    ShipmentStatusHistory::truncate();
+    Shipment::truncate();
+
+    return response()->json([
+        'success' => true,
+        'message' => '🗑️ تم حذف جميع الشحنات بنجاح'
+    ]);
+}
+
+
     /**
      * 🔁 تحديث عدة شحنات دفعة واحدة
      */

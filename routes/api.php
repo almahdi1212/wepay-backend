@@ -94,6 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shipments', [ShipmentController::class, 'store']);
     Route::put('/shipments/{tracking_number}', [ShipmentController::class, 'update']);
     Route::delete('/shipments/{tracking_number}', [ShipmentController::class, 'destroy']);
+    Route::delete('/shipments', [ShipmentController::class, 'destroyAll']);
+
 
 
 
