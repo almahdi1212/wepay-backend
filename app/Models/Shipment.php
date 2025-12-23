@@ -37,31 +37,37 @@ class Shipment extends Model
     /**
      * ⚙️ إنشاء رقم شحنة تلقائي مثل nov0001
      */
-    protected static function boot()
-    {
-        parent::boot();
+protected static function boot()
+{
+    parent::boot();
 
-        static::creating(function ($shipment) {
-            // أول 3 حروف من الشهر الحالي (صغيرة)
-            $prefix = strtolower(substr(Carbon::now()->format('M'), 0, 3)); // مثل: nov
+    static::creating(function ($shipment) {
 
-            // البحث عن آخر رقم لنفس الشهر
-            $lastShipment = self::where('tracking_number', 'like', "{$prefix}%")
-                ->orderBy('id', 'desc')
-                ->first();
+        // ✅ إذا تم إدخال رقم شحنة يدوي → لا تولّد
+        if (!empty($shipment->tracking_number)) {
+            return;
+        }
 
-            // الرقم الجديد
-            $nextNumber = 1;
-            if ($lastShipment) {
-                $lastNum = intval(substr($lastShipment->tracking_number, 3));
-                $nextNumber = $lastNum + 1;
-            }
+        // 🔁 توليد تلقائي فقط عند عدم وجود رقم
+        $prefix = strtolower(substr(Carbon::now()->format('M'), 0, 3));
 
-            // رقم مكون من 4 خانات (مثال: nov0001)
-            $formatted = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-            $shipment->tracking_number = $prefix . $formatted;
-        });
-    }
+        $lastShipment = self::where('tracking_number', 'like', "{$prefix}%")
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $nextNumber = 1;
+
+        if ($lastShipment) {
+            $lastNum = intval(substr($lastShipment->tracking_number, 3));
+            $nextNumber = $lastNum + 1;
+        }
+
+        $formatted = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        $shipment->tracking_number = $prefix . $formatted;
+    });
+}
+
+
 public function statusHistories()
 {
     return $this->hasMany(ShipmentStatusHistory::class)->orderBy('created_at', 'asc');

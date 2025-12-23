@@ -56,6 +56,7 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'tracking_number' => 'nullable|string|unique:shipments,tracking_number',
             'customer_name' => 'nullable|string|max:255',
             'customer_location' => 'nullable|string|max:255',
             'customer_whatsapp' => 'nullable|string|max:50',
@@ -70,7 +71,6 @@ class ShipmentController extends Controller
         $validated['user_id'] = auth()->id();
 
         // رقم تتبع عشوائي
-        $validated['tracking_number'] = strtoupper(Str::random(8));
 
         // إنشاء الشحنة
         $shipment = Shipment::create($validated);
@@ -97,7 +97,9 @@ class ShipmentController extends Controller
     {
         $shipment = Shipment::where('tracking_number', $tracking_number)->firstOrFail();
 
+
         $validated = $request->validate([
+            'tracking_number' => 'nullable|string|unique:shipments,tracking_number,' . $shipment->id,       
             'customer_name' => 'nullable|string|max:255',
             'customer_location' => 'nullable|string|max:255',
             'customer_whatsapp' => 'nullable|string|max:50',
