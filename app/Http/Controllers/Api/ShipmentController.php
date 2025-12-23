@@ -99,21 +99,19 @@ class ShipmentController extends Controller
 
 
         $validated = $request->validate([
-            'tracking_number' => 'nullable|string|unique:shipments,tracking_number,' . $shipment->id,       
-            'customer_name' => 'nullable|string|max:255',
-            'customer_location' => 'nullable|string|max:255',
-            'customer_whatsapp' => 'nullable|string|max:50',
-            'price_usd' => 'nullable|numeric',
-            'price_lyd' => 'nullable|numeric',
-            'quantity' => 'nullable|integer|min:1',
-            'description' => 'nullable|string',
-            'status_code' => 'required|integer|min:1|max:4',
+        'tracking_number' => 'sometimes|required|string|unique:shipments,tracking_number,' . $shipment->id,
+        'status_code' => 'sometimes|required|integer|between:1,4',
+        'customer_name' => 'sometimes|nullable|string',
+        'customer_whatsapp' => 'sometimes|nullable|string',
+        'price_usd' => 'sometimes|nullable|numeric',
+        'price_lyd' => 'sometimes|nullable|numeric',
+        'quantity' => 'sometimes|nullable|integer',
+        'description' => 'sometimes|nullable|string',
         ]);
 
         // ❌ منع تغيير المستخدم المسؤول
         $validated['user_id'] = $shipment->user_id;
 
-        $oldStatus = $shipment->status_code;
 
         $shipment->update($validated);
 
