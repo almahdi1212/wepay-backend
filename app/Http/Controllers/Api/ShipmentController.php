@@ -93,47 +93,47 @@ class ShipmentController extends Controller
     /**
      * ✏️ تعديل شحنة
      */
-    public function update(Request $request, $tracking_number)
+    public function update(Request $request, $id)
 {
-    $shipment = Shipment::where('tracking_number', $tracking_number)->firstOrFail();
+    $shipment = Shipment::findOrFail($id);
 
-    $validated = $request->validate([
-        'tracking_number'     => 'nullable|string|unique:shipments,tracking_number,' . $shipment->id,
-        'status_code'         => 'nullable|integer|between:1,4',
-        'customer_name'       => 'nullable|string',
-        'customer_whatsapp'   => 'nullable|string',
-        'price_usd'           => 'nullable|numeric',
-        'price_lyd'           => 'nullable|numeric',
-        'quantity'            => 'nullable|integer|min:1',
-        'description'         => 'nullable|string',
-    ]);
-
-    // ❌ منع تغيير المستخدم المسؤول
-    $validated['user_id'] = $shipment->user_id;
-
-    // ✅ حفظ الحالة القديمة
+    // نحتفظ بالحالة القديمة
     $oldStatus = $shipment->status_code;
 
-    // ✅ تحديث الشحنة
+    $validated = $request->validate([
+        'tracking_number'    => 'nullable|string|unique:shipments,tracking_number,' . $shipment->id,
+        'status_code'        => 'nullable|integer|between:1,4',
+        'customer_name'      => 'nullable|string',
+        'customer_whatsapp'  => 'nullable|string',
+        'price_usd'          => 'nullable|numeric',
+        'price_lyd'          => 'nullable|numeric',
+        'quantity'           => 'nullable|integer|min:1',
+        'description'        => 'nullable|string',
+    ]);
+
+    // ❌ منع تغيير الموظف المسؤول
+    unset($validated['user_id']);
+
+    // تحديث بيانات الشحنة
     $shipment->update($validated);
 
-    // ✅ تسجيل الحالة فقط إذا تغيّرت
+    // ✅ إذا تغيّرت الحالة → سجل في history
     if (
-        array_key_exists('status_code', $validated) &&
-        $validated['status_code'] != $oldStatus
+        isset($validated['status_code']) &&
+        $oldStatus != $validated['status_code']
     ) {
         ShipmentStatusHistory::create([
             'shipment_id' => $shipment->id,
             'status_code' => $validated['status_code'],
-            'note' => null,
-            'user_id' => auth()->id(),
+            'note'        => null,
+            'user_id'     => auth()->id(),
         ]);
     }
 
     return response()->json([
         'success' => true,
         'message' => '✅ تم تحديث بيانات الشحنة بنجاح',
-        'data' => $shipment,
+        'data'    => $shipment->fresh(), // ⬅️ مهم
     ]);
 }
 
