@@ -94,43 +94,49 @@ class ShipmentController extends Controller
      * ✏️ تعديل شحنة
      */
     public function update(Request $request, $tracking_number)
-    {
-        $shipment = Shipment::where('tracking_number', $tracking_number)->firstOrFail();
+{
+    $shipment = Shipment::where('tracking_number', $tracking_number)->firstOrFail();
 
+    $validated = $request->validate([
+        'tracking_number'     => 'nullable|string|unique:shipments,tracking_number,' . $shipment->id,
+        'status_code'         => 'nullable|integer|between:1,4',
+        'customer_name'       => 'nullable|string',
+        'customer_whatsapp'   => 'nullable|string',
+        'price_usd'           => 'nullable|numeric',
+        'price_lyd'           => 'nullable|numeric',
+        'quantity'            => 'nullable|integer|min:1',
+        'description'         => 'nullable|string',
+    ]);
 
-        $validated = $request->validate([
-        'tracking_number' => 'sometimes|required|string|unique:shipments,tracking_number,' . $shipment->id,
-        'status_code' => 'sometimes|required|integer|between:1,4',
-        'customer_name' => 'sometimes|nullable|string',
-        'customer_whatsapp' => 'sometimes|nullable|string',
-        'price_usd' => 'sometimes|nullable|numeric',
-        'price_lyd' => 'sometimes|nullable|numeric',
-        'quantity' => 'sometimes|nullable|integer',
-        'description' => 'sometimes|nullable|string',
-        ]);
+    // ❌ منع تغيير المستخدم المسؤول
+    $validated['user_id'] = $shipment->user_id;
 
-        // ❌ منع تغيير المستخدم المسؤول
-        $validated['user_id'] = $shipment->user_id;
+    // ✅ حفظ الحالة القديمة
+    $oldStatus = $shipment->status_code;
 
+    // ✅ تحديث الشحنة
+    $shipment->update($validated);
 
-        $shipment->update($validated);
-
-        // إذا تغيرت الحالة → سجل جديد
-        if ($oldStatus != $validated['status_code']) {
-            ShipmentStatusHistory::create([
-                'shipment_id' => $shipment->id,
-                'status_code' => $validated['status_code'],
-                'note' => null,
-                'user_id' => auth()->id(),
-            ]);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => '✅ تم تحديث بيانات الشحنة بنجاح',
-            'data' => $shipment,
+    // ✅ تسجيل الحالة فقط إذا تغيّرت
+    if (
+        array_key_exists('status_code', $validated) &&
+        $validated['status_code'] != $oldStatus
+    ) {
+        ShipmentStatusHistory::create([
+            'shipment_id' => $shipment->id,
+            'status_code' => $validated['status_code'],
+            'note' => null,
+            'user_id' => auth()->id(),
         ]);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => '✅ تم تحديث بيانات الشحنة بنجاح',
+        'data' => $shipment,
+    ]);
+}
+
 
     /**
      * 🗑️ حذف شحنة
